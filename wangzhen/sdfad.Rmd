@@ -1,0 +1,523 @@
+---
+title: "r7"
+author: "wangzhen"
+date: "2024-09-19"
+output: html_document
+---
+
+```{r 读取学生和创造性spss文件}
+# 加载 haven 包  
+library(haven)  
+
+# 定义你的文件路径  
+file1 <- "C:\\Users\\王振\\Desktop\\CY08MSP_STU_QQQ.SAV" 
+file2 <- "C:\\Users\\王振\\Desktop\\CY08MSP_CRT_COG.SAV"  
+
+# 读取文件  
+data1 <- read_sav(file1)  
+data2 <- read_sav(file2)  
+
+# 检查读取的数据，并显示成功消息  
+if (!is.null(data1) & !is.null(data2)) {  
+  print("两个文件读取成功！")  
+} else {  
+  print("文件读取失败！")  
+}
+```
+
+```{r 合并数据}
+library(dplyr)  
+
+# 确保 CNTSTUID 在 data1 和 data2 中存在  
+if ("CNTSTUID" %in% names(data1) & "CNTSTUID" %in% names(data2)) {  
+  
+    # 提取 data2 中的 CNTSTUID 值  
+    cntstuid_values <- data2$CNTSTUID  
+    
+    # 在 data1 中找到与 data2 中相同 CNTSTUID 的整行数据  
+    matched_rows <- data1 %>%  
+      filter(CNTSTUID %in% cntstuid_values)  
+    
+    # 使用 match() 函数确保按 data2 中 CNTSTUID 的顺序排列  
+    matched_rows <- matched_rows[match(cntstuid_values, matched_rows$CNTSTUID), ]  
+    
+    # 将提取的行添加到 data2 的后面  
+    data2_extended <- bind_cols(data2, matched_rows)  
+    
+    # 打印出合并后的数据框的前几行以确认结果  
+    print(head(data2_extended))  
+} else {  
+    print("CNTSTUID 在数据中未找到！")  
+}
+```
+
+```{r 个人特征性别差异}
+# Step 2: 排除 ST004D01T 为 1 和 2 的数据，并只过滤缺失值的变量  
+variables_to_check <- c("CREATOP", "OPENART",   
+                         "CREATEFF", "IMAGINE", "CURIOAGR",   
+                         "CREATACT", "GROSAGR", "EFFORT1",   
+                         "LIFESAT", "PERSEVAGR", "COOPAGR")  
+
+# Step 3: 仅保留 ST004D01T 为 1 和 2 的数据  
+filtered_data <- data2_extended %>%  
+  filter(ST004D01T %in% c(1, 2))  
+
+# Step 4: 进行 t 检验和计算平均值  
+results <- data.frame(Variable = character(), p_value = numeric(),   
+                      Mean_ST004D01T_1 = numeric(), Mean_ST004D01T_2 = numeric(),  
+                      stringsAsFactors = FALSE)  
+
+for (var in variables_to_check) {  
+  # 只对当前变量排除缺失值  
+  t_test_data <- filtered_data %>%  
+    filter(!is.na(.data[[var]]))  # 仅排除当前变量的缺失值  
+  
+  if (length(unique(t_test_data$ST004D01T)) == 2) {  # 确保ST004D01T有两个唯一值  
+    t_test_result <- t.test(t_test_data[[var]] ~ t_test_data$ST004D01T, var.equal = FALSE)  
+    mean_st004d01t_1 <- mean(t_test_data[[var]][t_test_data$ST004D01T == 1], na.rm = TRUE)  
+    mean_st004d01t_2 <- mean(t_test_data[[var]][t_test_data$ST004D01T == 2], na.rm = TRUE)  
+    
+    results <- rbind(results, data.frame(Variable = var,   
+                                          p_value = t_test_result$p.value,   
+                                          Mean_ST004D01T_1 = mean_st004d01t_1,   
+                                          Mean_ST004D01T_2 = mean_st004d01t_2))  
+  } else {  
+    results <- rbind(results, data.frame(Variable = var, p_value = NA,   
+                                          Mean_ST004D01T_1 = NA,   
+                                          Mean_ST004D01T_2 = NA))  # 如果没有足够的组，值设为NA  
+  }  
+}  
+
+# 显示结果  
+print(results)
+```
+
+
+
+```{r 家庭性别差异}
+# Step 2: 排除 ST004D01T 为 1 和 2 的数据，并只过滤缺失值的变量 
+
+variables_to_check <- c("CREATHME", "ESCS", "CREATFAM", "CREATOR", "CREATOPN")
+
+# Step 3: 仅保留 ST004D01T 为 1 和 2 的数据  
+filtered_data <- data2_extended %>%  
+  filter(ST004D01T %in% c(1, 2))  
+
+# Step 4: 进行 t 检验和计算平均值  
+results <- data.frame(Variable = character(), p_value = numeric(),   
+                      Mean_ST004D01T_1 = numeric(), Mean_ST004D01T_2 = numeric(),  
+                      stringsAsFactors = FALSE)  
+
+for (var in variables_to_check) {  
+  # 只对当前变量排除缺失值  
+  t_test_data <- filtered_data %>%  
+    filter(!is.na(.data[[var]]))  # 仅排除当前变量的缺失值  
+  
+  if (length(unique(t_test_data$ST004D01T)) == 2) {  # 确保ST004D01T有两个唯一值  
+    t_test_result <- t.test(t_test_data[[var]] ~ t_test_data$ST004D01T, var.equal = FALSE)  
+    mean_st004d01t_1 <- mean(t_test_data[[var]][t_test_data$ST004D01T == 1], na.rm = TRUE)  
+    mean_st004d01t_2 <- mean(t_test_data[[var]][t_test_data$ST004D01T == 2], na.rm = TRUE)  
+    
+    results <- rbind(results, data.frame(Variable = var,   
+                                          p_value = t_test_result$p.value,   
+                                          Mean_ST004D01T_1 = mean_st004d01t_1,   
+                                          Mean_ST004D01T_2 = mean_st004d01t_2))  
+  } else {  
+    results <- rbind(results, data.frame(Variable = var, p_value = NA,   
+                                          Mean_ST004D01T_1 = NA,   
+                                          Mean_ST004D01T_2 = NA))  # 如果没有足够的组，值设为NA  
+  }  
+}  
+
+# 显示结果  
+print(results)
+```
+
+
+
+```{r 将创造性思维和学生问卷合并}
+# 确保 CNTSTUID 和 ST004D01T 在相应的数据框中  
+if ("CNTSTUID" %in% names(data1) & "CNTSTUID" %in% names(data2) & "ST004D01T" %in% names(data1)) {  
+  
+    # 从 data2 中提取 CNTSTUID  
+    cntstuid_values <- data2$CNTSTUID  
+    
+    # 从 data1 中提取 ST004D01T 和对应 CNTSTUID  
+    st004d01t_values <- data1$ST004D01T[match(cntstuid_values, data1$CNTSTUID)]  
+    
+    # 将 ST004D01T 值添加到 data2 的最后一列  
+    data2$ST004D01T <- st004d01t_values  
+    
+    # 创建新数据框 data3，包含 data2 的所有内容和新增的 ST004D01T 列  
+    data3 <- data2  
+    
+    # 打印出 data3 的前几行以确认结果  
+    print(head(data3))  
+    
+} else {  
+    print("CNTSTUID 或 ST004D01T 在数据中未找到！")  
+}
+```
+
+```{r}
+# 确保 CNTSTUID 和 ST001D01T 在相应的数据框中  
+if ("CNTSTUID" %in% names(data1) & "CNTSTUID" %in% names(data2) & "ST001D01T" %in% names(data1)) {  
+  
+    # 从 data2 中提取 CNTSTUID  
+    cntstuid_values <- data2$CNTSTUID  
+    
+    # 从 data1 中提取 ST001D01T 和对应 CNTSTUID  
+    st001d01t_values <- data1$ST001D01T[match(cntstuid_values, data1$CNTSTUID)]  
+    
+    # 将 ST001D01T 值添加到 data2 的最后一列  
+    data2$ST001D01T <- st001d01t_values  
+    
+    # 创建新数据框 data3，包含 data2 的所有内容和新增的 ST001D01T 列  
+    data3 <- data2  
+    
+    # 打印出 data3 的前几行以确认结果  
+    print(head(data3))  
+    
+} else {  
+    print("CNTSTUID 或 ST001D01T 在数据中未找到！")  
+}
+```
+
+
+
+
+```{r 性别差异}
+t_result <- t.test(PV1CRTH_NC ~ as.factor(ST004D01T), data = data2, subset = ST004D01T %in% c(1, 2))  
+print(t_result) 
+```
+
+```{r}
+library(dplyr)  
+
+# 计算 ST004D01T 为 1 和 2 时 PV1CRTH_NC 的标准差  
+std_dev_results <- data2 %>%  
+  filter(ST004D01T %in% c(1, 2)) %>%  # 过滤 ST004D01T 为 1 和 2 的数据  
+  group_by(ST004D01T) %>%              # 按 ST004D01T 分组  
+  summarise(std_dev = sd(PV1CRTH_NC, na.rm = TRUE),  # 计算标准差，去除缺失值  
+            count = n(),                # 计算每组的数量  
+            .groups = 'drop')          # 不保留分组  
+
+# 查看结果  
+print(std_dev_results)
+```
+
+
+```{r}
+# 使用table函数统计ST001D01T的频数  
+freq_table <- table(data2$ST001D01T)  
+  
+# 打印频数表  
+print(freq_table)  
+  
+# 如果你还想知道有几个不同的取值，可以使用length函数  
+number_of_values <- length(freq_table)  
+print(paste("ST001D01T有", number_of_values, "个不同的取值。"))  
+  
+# 如果你想以更友好的方式查看数据，可以将结果转换为数据框  
+freq_data2 <- as.data.frame(freq_table)  
+colnames(freq_data2) <- c("Value", "Frequency")  
+print(freq_data2)
+```
+
+
+```{r 年级性别差异}
+# 自定义显著性检验函数  
+test_significance <- function(data, var_group, var_factor, var_response) {  
+  # 检查数据是否足够进行t检验  
+  if (length(unique(data[[var_factor]])) < 2 || any(table(data[[var_factor]]) < 2)) {  
+    warning("因子水平不足或某些水平下的样本量不足，无法进行t检验。")  
+    return(NA)  
+  }  
+    
+  # 执行t检验  
+  result <- t.test(data[[var_response]] ~ data[[var_factor]], data = data)  
+    
+  # 返回t检验结果  
+  return(result)  
+}  
+
+group_7 <- data2 %>%  
+  filter(ST001D01T == 7)  
+  
+result_7 <- test_significance(group_7, "ST001D01T", "ST004D01T", "PV1CRTH_NC")  
+print(paste("ST001D01T = 7的结果："))  
+print(result_7)  
+
+# 对ST001D01T取值是8的小组进行分析  
+group_8 <- data2 %>%  
+  filter(ST001D01T == 8)  
+  
+result_8 <- test_significance(group_8, "ST001D01T", "ST004D01T", "PV1CRTH_NC")  
+print(paste("ST001D01T = 8的结果："))  
+print(result_8)  
+  
+# 对ST001D01T取值是9的小组进行分析  
+group_9 <- data2 %>%  
+  filter(ST001D01T == 9)  
+  
+result_9 <- test_significance(group_9, "ST001D01T", "ST004D01T", "PV1CRTH_NC")  
+print(paste("ST001D01T = 9的结果："))  
+print(result_9)  
+  
+# 对ST001D01T取值是10的小组进行分析  
+group_10 <- data2 %>%  
+  filter(ST001D01T == 10)  
+  
+result_10 <- test_significance(group_10, "ST001D01T", "ST004D01T", "PV1CRTH_NC")  
+print(paste("ST001D01T = 10的结果："))  
+print(result_10)
+
+group_11 <- data2 %>%  
+  filter(ST001D01T == 11)  
+  
+result_11 <- test_significance(group_11, "ST001D01T", "ST004D01T", "PV1CRTH_NC")  
+print(paste("ST001D01T = 11的结果："))  
+print(result_11)  
+
+group_12 <- data2 %>%  
+  filter(ST001D01T == 12)  
+  
+result_12 <- test_significance(group_12, "ST001D01T", "ST004D01T", "PV1CRTH_NC")  
+print(paste("ST001D01T = 12的结果："))  
+print(result_12)  
+```
+
+
+```{r 性别在各个熟练度水平上的分布}
+library(dplyr)  
+library(ggplot2)  
+
+# 根据PV1CRTH_NC计算熟练水平  
+data2$Level <- with(data2, ifelse(PV1CRTH_NC >= 48, "低于1级",  
+                   ifelse(PV1CRTH_NC >= 41 & PV1CRTH_NC < 48, "6级",  
+                   ifelse(PV1CRTH_NC >= 32 & PV1CRTH_NC < 41, "5级",  
+                   ifelse(PV1CRTH_NC >= 23 & PV1CRTH_NC < 32, "4级",  
+                   ifelse(PV1CRTH_NC >= 15 & PV1CRTH_NC < 23, "3级",  
+                   ifelse(PV1CRTH_NC >= 6 & PV1CRTH_NC < 15, "2级", "1级")))))))  
+
+# 将 Level 列转换为有序因子  
+data2$Level <- factor(data2$Level, levels = c("低于1级", "1级", "2级", "3级", "4级", "5级", "6级"))  
+
+# 计算 ST004D01T 为 1 和 2 时每个熟练水平的比例  
+level_proportions_st1 <- data2 %>%  
+  filter(ST004D01T == 1) %>%  
+  group_by(Level) %>%  
+  summarise(count = n(), .groups = 'drop') %>%  
+  mutate(proportion = count / sum(count))  
+
+level_proportions_st2 <- data2 %>%  
+  filter(ST004D01T == 2) %>%  
+  group_by(Level) %>%  
+  summarise(count = n(), .groups = 'drop') %>%  
+  mutate(proportion = count / sum(count))  
+
+# 合并数据框  
+level_proportions <- bind_rows(  
+  mutate(level_proportions_st1, ST004D01T = "1"),  
+  mutate(level_proportions_st2, ST004D01T = "2")  
+)  
+
+# 可视化，使用堆叠条形图  
+ggplot(level_proportions, aes(x = Level, y = proportion, fill = ST004D01T)) +  
+  geom_bar(stat = "identity") +  # 默认是堆叠图  
+  geom_text(aes(label = scales::percent(proportion, accuracy = 1)),   
+            vjust = -0.5,   
+            position = position_stack(vjust = 0.5)) +  # 可以使用position_stack调整文本位置  
+  labs(title = "性别在创造性思维的各个熟练水平比例",   
+       x = "熟练水平",   
+       y = "比例") +  
+  theme_minimal() +  
+  scale_fill_manual(values = c("1" = "yellow", "2" = "green"),  
+                    labels = c("性别", "女", "男")) +   
+  scale_fill_discrete(name = "性别",   
+                      breaks = c("1", "2"),   
+                      labels = c("女", "男"))
+```
+
+
+
+
+```{r}
+# 加载必要的包  
+library(readxl)  
+library(dplyr)  
+
+# 假设您的数据已经被读取到data3中  
+# 读取Excel文件，假设文件名为 "ct题目.xlsx"  
+rules <- read_excel("C:\\Users\\王振\\Desktop\\ct题目.xlsx")  
+
+# 假设第一列为变量名，第二列至第四列为替代值  
+var_names <- rules[[1]]  
+replace_0 <- rules[[2]]  
+replace_1 <- rules[[3]]  
+replace_2 <- rules[[4]]  
+
+# 步骤2: 对每一个变量进行处理  
+for (i in seq_along(var_names)) {  
+  var_name <- var_names[i]  
+  new_val_0 <- replace_0[i]  
+  new_val_1 <- replace_1[i]  
+  new_val_2 <- replace_2[i]  
+  
+  # 检查变量是否存在于数据集  
+  if (var_name %in% names(data5)) {  
+    # 检查变量是否有取值2  
+    if (any(data5[[var_name]] %in% c(0, 1, 2))) {  
+      # 替换变量的值  
+      data5[[var_name]] <- case_when(  
+        data5[[var_name]] == 0 ~ new_val_0,  
+        data5[[var_name]] == 1 ~ new_val_1,  
+        data5[[var_name]] == 2 ~ new_val_2,  
+        TRUE ~ data5[[var_name]]  # 保留原值  
+      )  
+    } else {  
+      # 只有0和1的情况  
+      data5[[var_name]] <- case_when(  
+        data5[[var_name]] == 0 ~ new_val_0,  
+        data5[[var_name]] == 1 ~ new_val_1,  
+        TRUE ~ data4[[var_name]]  # 保留原值  
+      )  
+    }  
+  }  
+}  
+
+# 步骤3: 计算 ST004D01T 取值为 1 和 2 对应的所有变量的平均值  
+# 创建一个数据框来存储结果  
+mean_values <- data5 %>%  
+  filter(ST004D01T %in% c(1, 2)) %>%        # 过滤出 ST004D01T 为 1 和 2 的数据  
+  select(ST004D01T, all_of(var_names)) %>% # 选择 ST004D01T 和需要计算平均值的变量  
+  group_by(ST004D01T) %>%                   # 按照 ST004D01T 分组  
+  summarise(across(everything(), list(mean = mean), na.rm = TRUE)) # 计算每个变量的平均值  
+
+# 输出计算出的平均值  
+print(mean_values)
+```
+```{r 单题目男女性别差异}
+data9 <- data8
+```
+
+
+
+```{r}
+# 加载必要的包  
+library(dplyr)  
+
+# 步骤1: 筛选DT200Q01C2取值为0、1、2的行  
+filtered_data <- data7 %>% filter(DT690Q01C %in% c(0, 1, 2))  
+
+# 步骤2: 替换值  
+filtered_data$DT690Q01C <- dplyr::case_when(  
+  filtered_data$DT690Q01C == 0 ~ 0,  
+  filtered_data$DT690Q01C == 1 ~ 46,  
+  TRUE ~ filtered_data$DT690Q01C  # 保留原值  
+)  
+
+# 步骤3: 计算ST004D01T取值1和2时的平均值  
+mean_values <- filtered_data %>%  
+  filter(ST004D01T %in% c(1, 2)) %>%                  # 过滤出ST004D01T为1和2的数据  
+  group_by(ST004D01T) %>%                             # 按ST004D01T分组  
+  summarise(mean_value = mean(DT690Q01C, na.rm = TRUE)) # 计算DT200Q01C2的平均值  
+
+# 输出平均值  
+print("各组的均值:")  
+print(mean_values)  
+
+# 步骤4: 进行t检验  
+data_1 <- filtered_data %>% filter(ST004D01T == 1) %>% pull(DT690Q01C)  
+data_2 <- filtered_data %>% filter(ST004D01T == 2) %>% pull(DT690Q01C)  
+
+# 执行t检验  
+t_test_result <- t.test(data_1, data_2)  
+
+# 输出t检验结果  
+print("t检验结果:")  
+print(t_test_result)
+```
+```{r p值}
+# 加载必要的包  
+library(readxl)  
+library(dplyr)  
+
+# 假设您的数据已经被读取到data5中  
+# 读取Excel文件，假设文件名为 "ct题目.xlsx"  
+rules <- read_excel("C:\\Users\\王振\\Desktop\\ct题目.xlsx")  
+
+# 假设第一列为变量名，第二列至第四列为替代值  
+var_names <- rules[[1]]  
+replace_0 <- rules[[2]]  
+replace_1 <- rules[[3]]  
+replace_2 <- rules[[4]]  
+
+# 步骤2: 对每一个变量进行处理  
+for (i in seq_along(var_names)) {  
+  var_name <- var_names[i]  
+  new_val_0 <- replace_0[i]  
+  new_val_1 <- replace_1[i]  
+  new_val_2 <- replace_2[i]  
+  
+  # 检查变量是否存在于数据集  
+  if (var_name %in% names(data8)) {  
+    # 检查变量是否有取值2  
+    if (any(data5[[var_name]] %in% c(0, 1, 2))) {  
+      # 替换变量的值  
+      data5[[var_name]] <- case_when(  
+        data5[[var_name]] == 0 ~ new_val_0,  
+        data5[[var_name]] == 1 ~ new_val_1,  
+        data5[[var_name]] == 2 ~ new_val_2,  
+        TRUE ~ data5[[var_name]]  # 保留原值  
+      )  
+    } else {  
+      # 只有0和1的情况  
+      data5[[var_name]] <- case_when(  
+        data5[[var_name]] == 0 ~ new_val_0,  
+        data5[[var_name]] == 1 ~ new_val_1,  
+        TRUE ~ data5[[var_name]]  # 保留原值  
+      )  
+    }  
+  }  
+}  
+
+# 步骤3: 计算 ST004D01T 取值为 1 和 2 对应的所有变量的平均值和显著性检验  
+results <- data.frame(Variable = character(), Mean1 = numeric(), Mean2 = numeric(), P_Value = numeric(), stringsAsFactors = FALSE)  
+
+for (var_name in var_names) {  
+  # 选择 ST004D01T 为 1 和 2 对应的值  
+  data_1 <- data5 %>% filter(ST004D01T == 1) %>% pull(var_name)  
+  data_2 <- data5 %>% filter(ST004D01T == 2) %>% pull(var_name)  
+  
+  # 计算均值  
+  mean1 <- mean(data_1, na.rm = TRUE)  
+  mean2 <- mean(data_2, na.rm = TRUE)  
+  
+  # 执行 t 检验  
+  t_test_result <- t.test(data_1, data_2)  
+  
+  # 提取 p 值  
+  p_value <- t_test_result$p.value  
+  
+  # 将结果添加到数据框  
+  results <- rbind(results, data.frame(Variable = var_name, Mean1 = mean1, Mean2 = mean2, P_Value = p_value))  
+}  
+
+# 输出计算出的均值和p值  
+print(results)
+```
+
+```{r}
+# 假设您已经在R中读取了数据并存储在data中  
+
+# 统计 ST004D01T 取值 1 和 2 的频数  
+freq_st004d01t <- table(data9$ST004D01T)  
+print("ST004D01T的频数:")  
+print(freq_st004d01t)  
+
+# 统计 CNTSCHID 的不同类别数量  
+num_categories_cntschid <- length(unique(data9$CNT))  
+print(paste("CNTSCHID的类别数量:", num_categories_cntschid))
+```
+
